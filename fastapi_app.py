@@ -219,19 +219,55 @@ def delete_department(department_id: int, service: DepartmentService = Depends(g
 # ----------------------------
 # Seed Data Endpoint
 # ----------------------------
-class SeedRequest(BaseModel):
-    n_departments: Optional[int] = 5
-    n_employees: Optional[int] = 50
+# class SeedRequest(BaseModel):
+#     n_departments: Optional[int] = 5
+#     n_employees: Optional[int] = 50
+
+# seed_router = APIRouter(tags=["Utility"])
+
+# @seed_router.post("/seed-data")
+# def seed_data(n_departments: int = Form(5), n_employees: int = Form(50), db: Session = Depends(get_db)):
+#     fake = Faker()
+#     db.query(Employee).delete()
+#     db.query(Department).delete()
+#     db.commit()
+
+#     dep_names = ["HR","Finance","IT","Sales","Marketing","Support","Operations"]
+#     departments = [Department(name=name) for name in dep_names[:n_departments]]
+#     db.add_all(departments)
+#     db.commit()
+
+#     dep_ids = [d.id for d in db.query(Department).all()]
+
+#     employees = []
+#     for _ in range(n_employees):
+#         employees.append(Employee(
+#             name=fake.first_name(),
+#             age=random.randint(22,55),
+#             dep_id=random.choice(dep_ids)
+#         ))
+#     db.add_all(employees)
+#     db.commit()
+#     return {"detail": f"Seeded {n_departments} Departments & {n_employees} Employees"}
+
+
+from fastapi import APIRouter, Form, Depends
+from fastapi.responses import HTMLResponse
+from sqlalchemy.orm import Session
+from faker import Faker
+import random
 
 seed_router = APIRouter(tags=["Utility"])
 
-@seed_router.post("/seed-data")
+@seed_router.post("/seed-data", response_class=HTMLResponse)
 def seed_data(n_departments: int = Form(5), n_employees: int = Form(50), db: Session = Depends(get_db)):
     fake = Faker()
+    # Clear existing data
     db.query(Employee).delete()
     db.query(Department).delete()
     db.commit()
 
+    # Seed departments
     dep_names = ["HR","Finance","IT","Sales","Marketing","Support","Operations"]
     departments = [Department(name=name) for name in dep_names[:n_departments]]
     db.add_all(departments)
@@ -239,6 +275,7 @@ def seed_data(n_departments: int = Form(5), n_employees: int = Form(50), db: Ses
 
     dep_ids = [d.id for d in db.query(Department).all()]
 
+    # Seed employees
     employees = []
     for _ in range(n_employees):
         employees.append(Employee(
@@ -248,7 +285,21 @@ def seed_data(n_departments: int = Form(5), n_employees: int = Form(50), db: Ses
         ))
     db.add_all(employees)
     db.commit()
-    return {"detail": f"Seeded {n_departments} Departments & {n_employees} Employees"}
+
+    # Return HTML with 5-second redirect
+    html_content = f"""
+    <html>
+        <head>
+            <meta http-equiv="refresh" content="5;url=/" />
+        </head>
+        <body>
+            <h2>Seeded {n_departments} Departments & {n_employees} Employees.</h2>
+            <p>You will be redirected to the home page in 5 seconds...</p>
+            <p>If not, <a href="/">click here</a>.</p>
+        </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content)
 
 # ----------------------------
 # Templates
@@ -322,3 +373,4 @@ fastapi_app = FastAPI(title="Employee & Department CRUD")
 fastapi_app.include_router(employee_router)
 fastapi_app.include_router(department_router)
 fastapi_app.include_router(seed_router)
+
