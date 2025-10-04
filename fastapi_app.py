@@ -437,23 +437,25 @@ def run_query(request: Request, query: str = Form(...), db: Session = Depends(ge
         "results": query_results,
         "stored_queries": stored_queries
     }
-    print("RUNNNNNNNNNNNNNNNN", total_result)
-    return templates.TemplateResponse("index.html", total_result)
 
+    return templates.TemplateResponse("index.html", total_result)
 
 @seed_router.post("/update-queries")
 async def update_queries(request: Request, db: Session = Depends(get_db)):
-    """Update only query strings; do not modify results, success, or error fields"""
     form = await request.form()
     stored_queries = load_queries()
+
+    # Save only when Save Changes button is clicked
     for q in stored_queries:
         key = f"query_{q['id']}"
         if key in form:
             q['query'] = form[key]
+
     save_queries(stored_queries)
 
     departments = db.query(Department).all()
     employees = db.query(Employee).all()
+
     return templates.TemplateResponse("index.html", {
         "request": request,
         "departments": departments,
@@ -462,6 +464,22 @@ async def update_queries(request: Request, db: Session = Depends(get_db)):
         "stored_queries": stored_queries
     })
 
+@seed_router.post("/delete-query/{query_id}")
+def delete_query(query_id: int, request: Request, db: Session = Depends(get_db)):
+    stored_queries = load_queries()
+    stored_queries = [q for q in stored_queries if q['id'] != query_id]  # remove selected query
+    save_queries(stored_queries)
+
+    departments = db.query(Department).all()
+    employees = db.query(Employee).all()
+
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "departments": departments,
+        "employees": employees,
+        "results": query_results,
+        "stored_queries": stored_queries
+    })
 
 @seed_router.post("/clear-results")
 def clear_results(request: Request, db: Session = Depends(get_db)):
@@ -508,3 +526,4 @@ def home(request: Request, db: Session = Depends(get_db)):
 app.include_router(employee_router)
 app.include_router(department_router)
 app.include_router(seed_router)
+
