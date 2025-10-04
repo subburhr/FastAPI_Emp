@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Employee & Department Viewer — Dark</title>
+
+<style>
+body {
+    background: #0b0f12;
+    color: #e6e6e6;
+    font-family: Arial,sans-serif;
+    margin:0; padding:0;
+}
+.container { max-width:1200px; margin:20px auto; padding:20px; }
+h1 { color:#7cdbb6; }
+h2 { color:#7aa2ff; }
+.small { font-size:14px; color:#b5b5b5; }
+
+.btn { background:#222; color:#fff; border:1px solid #555; padding:6px 12px; margin:5px; border-radius:6px; cursor:pointer; }
+.btn.primary { background:#7cdbb6; color:#000; border:none; }
+
+.tables-container { display:flex; gap:20px; flex-wrap:wrap; }
+.table-section { flex:1 1 45%; min-width:300px; }
+
+table { width:100%; border-collapse:collapse; margin-top:10px; background:#111; }
+th, td { border:1px solid #333; padding:6px; text-align:left; }
+th { background:#222; color:#7cdbb6; }
+
+textarea { width:100%; min-height:120px; background:#111; color:#7ce0ff; border:1px solid #333; border-radius:6px; padding:8px; font-family:monospace; }
+
+.results { margin-top:20px; }
+.result-card { background:#111; border:1px solid #333; padding:10px; margin:10px 0; border-radius:6px; }
+.result-table { width:100%; border-collapse:collapse; margin-top:6px; cursor:pointer; }
+.result-table th { background:#222; color:#ffcd4d; }
+.result-table td { border:1px solid #333; padding:6px; color:#cfe8ff; }
+
+.highlight { background:#444 !important; color:#fff !important; transition: background 0.5s ease; }
+.hidden { display:none; }
+.toolbar { margin-bottom:15px; }
+.result-controls { margin-top:5px; display:flex; gap:5px; flex-wrap:wrap; }
+</style>
+</head>
+
+<body>
+<div class="container">
+<h1>Employee & Department Viewer</h1>
+<p class="small">Admin panel — run SQLAlchemy ORM expressions (admin only). Results persist until you click Clear.</p>
+
+<div class="toolbar">
+<button class="btn" id="toggle-all" type="button" onclick="toggleAll()">Collapse Tables</button>
+</div>
+
+<div class="tables-container">
+  <section id="departments" class="table-section">
+    <h2>Departments</h2>
+    <table id="dept-table">
+      <thead><tr><th>ID</th><th>Name</th></tr></thead>
+      <tbody>
+      {% for d in departments %}
+        <tr><td>{{ d.id }}</td><td>{{ d.name }}</td></tr>
+      {% else %}
+        <tr><td colspan="2">No departments</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section id="employees" class="table-section">
+    <h2>Employees</h2>
+    <table id="emp-table">
+      <thead><tr><th>ID</th><th>Name</th><th>Age</th><th>Department</th></tr></thead>
+      <tbody>
+      {% for e in employees %}
+        <tr>
+          <td>{{ e.id }}</td>
+          <td>{{ e.name }}</td>
+          <td>{{ e.age if e.age else '' }}</td>
+          <td>{{ e.department.name if e.department else '' }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4">No employees</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</div>
+
+<h2>Seed Data</h2>
+<form method="post" action="/seed-data">
+<label>Departments: <input type="number" name="n_departments" value="5" min="1" /></label>
+<label>Employees: <input type="number" name="n_employees" value="50" min="1" /></label>
+<button class="btn primary" type="submit">Seed</button>
+</form>
+
+<h2>Run ORM Query</h2>
+<form method="post" action="/run-query">
+<textarea name="query" placeholder='Example: db.query(Employee).filter(Employee.age > 30).all()'></textarea>
+<div>
+<button class="btn primary" type="submit">Run</button>
+<button class="btn" type="submit" formaction="/clear-results">Clear</button>
+</div>
+</form>
+
+<div class="results">
+<h2>Query Results</h2>
+{% if results %}
+{% for r in results %}
+<div class="result-card">
+<div class="result-controls">
+<strong>Query:</strong> {{ r.query }}
+<button class="btn" onclick="clearResult(this)">Clear</button>
+<button class="btn" onclick="toggleResult(this)">Collapse/Expand</button>
+</div>
+{% if r.error %}
+<span style="color:#ff6b6b;"><strong>Error:</strong> {{ r.error }}</span>
+{% elif r.result and r.result|length > 0 %}
+<table class="result-table">
+<thead>
+<tr>
+{% for key in r.result[0].keys() %}
+<th>{{ key }}</th>
+{% endfor %}
+</tr>
+</thead>
+<tbody>
+{% for row in r.result %}
+<tr>
+{% for val in row.values() %}
+<td>{{ val }}</td>
+{% endfor %}
+</tr>
+{% endfor %}
+</tbody>
+</table>
+{% else %}
+<p class="small">No results for this query.</p>
+{% endif %}
+</div>
+{% endfor %}
+{% else %}
+<p class="small">No results yet.</p>
+{% endif %}
+</div>
+</div>
+
+<script>
+function toggleAll(){
+    const depts = document.getElementById('departments');
+    const emps = document.getElementById('employees');
+    const btn = document.getElementById('toggle-all');
+    const hidden = depts.classList.contains('hidden');
+    if(hidden){
+        depts.classList.remove('hidden');
+        emps.classList.remove('hidden');
+        btn.textContent="Collapse Tables";
+    } else {
+        depts.classList.add('hidden');
+        emps.classList.add('hidden');
+        btn.textContent="Expand Tables";
+    }
+}
+
+function clearHighlights() {
+    document.querySelectorAll('#dept-table tr, #emp-table tr, .result-table tr').forEach(r=>r.classList.remove('highlight'));
+}
+
+document.querySelectorAll('.result-table').forEach(table=>{
+    table.addEventListener('click', ()=>{
+        clearHighlights();
+        // Highlight the clicked query table
+        table.querySelectorAll('tr').forEach(r=>r.classList.add('highlight'));
+
+        const rows = table.querySelectorAll('tbody tr');
+        rows.forEach(r=>{
+            const values = Array.from(r.cells).map(c=>c.textContent.trim());
+            document.querySelectorAll('#dept-table tbody tr').forEach(orig=>{
+                const origValues = Array.from(orig.cells).map(c=>c.textContent.trim());
+                if(values.every(v=>origValues.includes(v))) orig.classList.add('highlight');
+            });
+            document.querySelectorAll('#emp-table tbody tr').forEach(orig=>{
+                const origValues = Array.from(orig.cells).map(c=>c.textContent.trim());
+                if(values.every(v=>origValues.includes(v))) orig.classList.add('highlight');
+            });
+        });
+    });
+});
+
+function clearResult(btn){
+    const card = btn.closest('.result-card');
+    card.remove();
+    clearHighlights();
+}
+
+function toggleResult(btn){
+    const card = btn.closest('.result-card');
+    const table = card.querySelector('table');
+    if(!table) return;
+    table.classList.toggle('hidden');
+}
+</script>
+</body>
+</html>
