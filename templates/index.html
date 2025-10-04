@@ -493,8 +493,8 @@ a:hover {
                         <label><strong>Query {{ loop.index }}:</strong></label>
                         <textarea id="query_text_{{ q.id }}" name="query_{{ q.id }}">{{ q.query }}</textarea><br>
                         <button type="button" onclick="runStoredQuery({{ q.id }})">▶ Run</button>
-                        <button formaction="/clear-results" formmethod="post">Clear All Results</button>
-                        <button type="submit">💾 Save Changes</button>
+                        <button type="submit" formaction="/update-queries" formmethod="post">💾 Save Changes</button>
+                        <button type="submit" formaction="/delete-query/{{ q.id }}" formmethod="post" onclick="return confirm('Delete this query?')">🗑 Delete</button>
 
                         {% if q.result %}
                         <div class="result-body" id="result-{{ q.id }}">
@@ -575,3 +575,4 @@ a:hover {
 </main>
 </body>
 </html>
+
