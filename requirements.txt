@@ -3,3 +3,5 @@ uvicorn[standard]
 sqlalchemy
 pydantic
 faker
+python-multipart
+jinja2
