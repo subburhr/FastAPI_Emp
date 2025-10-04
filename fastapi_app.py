@@ -1,21 +1,23 @@
 from fastapi import FastAPI, APIRouter, Depends, HTTPException, Request, Form
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import Column, Integer, String, ForeignKey, create_engine
+from sqlalchemy import Column, Integer, String, Float, Boolean, Date, ForeignKey, Table, create_engine, func
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session, relationship
+from sqlalchemy.orm import sessionmaker, relationship, Session
 from pydantic import BaseModel
 from typing import Optional, List
+from datetime import date, timedelta
 from faker import Faker
 import random
+import os
+import json
 
 # ----------------------------
-# Database
+# Database Setup
 # ----------------------------
 DATABASE_URL = "sqlite:///./emp_crud.db"
-
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 Base = declarative_base()
 
 def get_db():
@@ -26,29 +28,73 @@ def get_db():
         db.close()
 
 # ----------------------------
+# Association Tables
+# ----------------------------
+employee_project = Table(
+    "employee_project", Base.metadata,
+    Column("employee_id", ForeignKey("employees.id"), primary_key=True),
+    Column("project_id", ForeignKey("projects.id"), primary_key=True)
+)
+
+employee_role = Table(
+    "employee_role", Base.metadata,
+    Column("employee_id", ForeignKey("employees.id"), primary_key=True),
+    Column("role_id", ForeignKey("roles.id"), primary_key=True)
+)
+
+# ----------------------------
 # Models
 # ----------------------------
 class Department(Base):
     __tablename__ = "departments"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, nullable=False)
+    location = Column(String, default="HQ")
+    budget = Column(Float, default=0.0)
     employees = relationship("Employee", back_populates="department")
+
+class Project(Base):
+    __tablename__ = "projects"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, nullable=False)
+    location = Column(String, default="HQ")
+    budget = Column(Float, default=0.0)
+    employees = relationship("Employee", secondary=employee_project, back_populates="projects")
+
+class Role(Base):
+    __tablename__ = "roles"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, nullable=False)
+    employees = relationship("Employee", secondary=employee_role, back_populates="roles")
 
 class Employee(Base):
     __tablename__ = "employees"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     age = Column(Integer)
+    email = Column(String, unique=True)
+    salary = Column(Float, default=0.0)
+    bonus = Column(Float, default=0.0)
+    hire_date = Column(Date, default=date.today)
+    active = Column(Boolean, default=True)
+    gender = Column(String, default="M")
     dep_id = Column(Integer, ForeignKey("departments.id"))
+    manager_id = Column(Integer, ForeignKey("employees.id"), nullable=True)
+
     department = relationship("Department", back_populates="employees")
+    manager = relationship("Employee", remote_side=[id], backref="subordinates")
+    projects = relationship("Project", secondary=employee_project, back_populates="employees")
+    roles = relationship("Role", secondary=employee_role, back_populates="employees")
 
 Base.metadata.create_all(bind=engine)
 
 # ----------------------------
-# Schemas
+# Pydantic Schemas
 # ----------------------------
 class DepartmentBase(BaseModel):
     name: str
+    location: Optional[str] = "HQ"
+    budget: Optional[float] = 0.0
 
 class DepartmentCreate(DepartmentBase):
     pass
@@ -61,7 +107,14 @@ class DepartmentSchema(DepartmentBase):
 class EmployeeBase(BaseModel):
     name: str
     age: Optional[int] = None
+    email: Optional[str] = None
+    salary: Optional[float] = 0.0
+    bonus: Optional[float] = 0.0
+    hire_date: Optional[date] = date.today()
+    active: Optional[bool] = True
+    gender: Optional[str] = "M"
     dep_id: int
+    manager_id: Optional[int] = None
 
 class EmployeeCreate(EmployeeBase):
     pass
@@ -69,8 +122,11 @@ class EmployeeCreate(EmployeeBase):
 class EmployeeSchema(EmployeeBase):
     id: int
     department: Optional[DepartmentSchema]
+    manager: Optional['EmployeeSchema'] = None
     class Config:
         orm_mode = True
+
+EmployeeSchema.update_forward_refs()
 
 # ----------------------------
 # Repositories
@@ -159,167 +215,150 @@ class EmployeeService:
         return self.repo.delete(employee_id)
 
 # ----------------------------
+# FastAPI Setup
+# ----------------------------
+app = FastAPI(title="Employee & Department CRUD")
+templates = Jinja2Templates(directory="templates")
+query_results = []
+QUERY_FILE = "stored_queries.json"
+
+def load_queries():
+    if not os.path.exists(QUERY_FILE):
+        with open(QUERY_FILE, "w") as f:
+            json.dump([], f)
+        return []
+    try:
+        with open(QUERY_FILE, "r") as f:
+            return json.load(f)
+    except json.JSONDecodeError:
+        # Reset file if it's corrupted
+        with open(QUERY_FILE, "w") as f:
+            json.dump([], f)
+        return []
+
+
+def save_queries(queries):
+    with open(QUERY_FILE, "w") as f:
+        json.dump(queries, f, indent=4)
+
+def save_query_record(query: str, success: bool, result=None, error=None):
+    records = load_queries()
+    if not any(r["query"] == query and r.get("success") == success for r in records):
+        records.append({"id": len(records)+1, "query": query, "success": success, "result": result, "error": error})
+        save_queries(records)
+
+# ----------------------------
 # Routers
 # ----------------------------
 employee_router = APIRouter(prefix="/employees", tags=["Employees"])
 department_router = APIRouter(prefix="/departments", tags=["Departments"])
+seed_router = APIRouter(tags=["Utility"])
 
+# Employee endpoints
 def get_employee_service(db: Session = Depends(get_db)):
     return EmployeeService(db)
 
-def get_department_service(db: Session = Depends(get_db)):
-    return DepartmentService(db)
-
-# Employee Endpoints
 @employee_router.get("/", response_model=List[EmployeeSchema])
 def get_all_employees(service: EmployeeService = Depends(get_employee_service)):
     return service.get_all()
 
-@employee_router.get("/{employee_id}", response_model=EmployeeSchema)
-def get_employee(employee_id: int, service: EmployeeService = Depends(get_employee_service)):
-    emp = service.get_by_id(employee_id)
-    if not emp:
-        raise HTTPException(status_code=404, detail="Employee not found")
-    return emp
+# Department endpoints
+def get_department_service(db: Session = Depends(get_db)):
+    return DepartmentService(db)
 
-@employee_router.post("/", response_model=EmployeeSchema)
-def create_employee(employee: EmployeeCreate, service: EmployeeService = Depends(get_employee_service)):
-    return service.create(employee)
-
-@employee_router.delete("/{employee_id}")
-def delete_employee(employee_id: int, service: EmployeeService = Depends(get_employee_service)):
-    emp = service.delete(employee_id)
-    if not emp:
-        raise HTTPException(status_code=404, detail="Employee not found")
-    return {"detail": "Employee deleted"}
-
-# Department Endpoints
 @department_router.get("/", response_model=List[DepartmentSchema])
 def get_all_departments(service: DepartmentService = Depends(get_department_service)):
     return service.get_all()
 
-@department_router.get("/{department_id}", response_model=DepartmentSchema)
-def get_department(department_id: int, service: DepartmentService = Depends(get_department_service)):
-    dep = service.get_by_id(department_id)
-    if not dep:
-        raise HTTPException(status_code=404, detail="Department not found")
-    return dep
-
-@department_router.post("/", response_model=DepartmentSchema)
-def create_department(department: DepartmentCreate, service: DepartmentService = Depends(get_department_service)):
-    return service.create(department)
-
-@department_router.delete("/{department_id}")
-def delete_department(department_id: int, service: DepartmentService = Depends(get_department_service)):
-    dep = service.delete(department_id)
-    if not dep:
-        raise HTTPException(status_code=404, detail="Department not found")
-    return {"detail": "Department deleted"}
-
 # ----------------------------
-# Seed Data Endpoint
+# Seed Data
 # ----------------------------
-# class SeedRequest(BaseModel):
-#     n_departments: Optional[int] = 5
-#     n_employees: Optional[int] = 50
+from sqlalchemy import text
 
-# seed_router = APIRouter(tags=["Utility"])
-
-# @seed_router.post("/seed-data")
-# def seed_data(n_departments: int = Form(5), n_employees: int = Form(50), db: Session = Depends(get_db)):
-#     fake = Faker()
-#     db.query(Employee).delete()
-#     db.query(Department).delete()
-#     db.commit()
-
-#     dep_names = ["HR","Finance","IT","Sales","Marketing","Support","Operations"]
-#     departments = [Department(name=name) for name in dep_names[:n_departments]]
-#     db.add_all(departments)
-#     db.commit()
-
-#     dep_ids = [d.id for d in db.query(Department).all()]
-
-#     employees = []
-#     for _ in range(n_employees):
-#         employees.append(Employee(
-#             name=fake.first_name(),
-#             age=random.randint(22,55),
-#             dep_id=random.choice(dep_ids)
-#         ))
-#     db.add_all(employees)
-#     db.commit()
-#     return {"detail": f"Seeded {n_departments} Departments & {n_employees} Employees"}
-
-
-from fastapi import APIRouter, Form, Depends
-from fastapi.responses import HTMLResponse
-from sqlalchemy.orm import Session
-from faker import Faker
-import random
-
-seed_router = APIRouter(tags=["Utility"])
 
 @seed_router.post("/seed-data", response_class=HTMLResponse)
 def seed_data(n_departments: int = Form(5), n_employees: int = Form(50), db: Session = Depends(get_db)):
     fake = Faker()
-    # Clear existing data
+
+    # Clear tables and association tables
+    db.execute(text("DELETE FROM employee_project"))
+    db.execute(text("DELETE FROM employee_role"))
     db.query(Employee).delete()
     db.query(Department).delete()
+    db.query(Project).delete()
+    db.query(Role).delete()
     db.commit()
 
-    # Seed departments
+    # Departments
     dep_names = ["HR","Finance","IT","Sales","Marketing","Support","Operations"]
-    departments = [Department(name=name) for name in dep_names[:n_departments]]
+    departments = [
+        Department(name=name, budget=random.randint(50000,200000), location=random.choice(["HQ","Branch"]))
+        for name in dep_names[:n_departments]
+    ]
     db.add_all(departments)
     db.commit()
-
     dep_ids = [d.id for d in db.query(Department).all()]
 
-    # Seed employees
+    # Roles
+    role_names = ["Engineer","Manager","Analyst","Admin","Intern"]
+    roles = [Role(name=r) for r in role_names]
+    db.add_all(roles)
+    db.commit()
+
+    # Projects
+    proj_names = ["ProjectA","ProjectB","ProjectC","ProjectD"]
+    projects = [
+        Project(name=p, budget=random.randint(10000,50000), location=random.choice(["HQ","Branch"]))
+        for p in proj_names
+    ]
+    db.add_all(projects)
+    db.commit()
+
+    # Employees
     employees = []
     for _ in range(n_employees):
-        employees.append(Employee(
+        emp = Employee(
             name=fake.first_name(),
             age=random.randint(22,55),
+            email=fake.unique.email(),
+            salary=random.randint(30000,120000),
+            bonus=random.randint(1000,10000),
+            hire_date=date.today() - timedelta(days=random.randint(0,2000)),
+            active=random.choice([True, True, True, False]),
+            gender=random.choice(["M","F"]),
             dep_id=random.choice(dep_ids)
-        ))
+        )
+        # Assign random manager if employees exist
+        if employees:
+            emp.manager_id = random.choice(employees).id
+
+        # Assign random projects safely
+        chosen_projects = random.sample(projects, k=random.randint(0, len(projects)))
+        for proj in chosen_projects:
+            if proj not in emp.projects:
+                emp.projects.append(proj)
+
+        # Assign random roles safely
+        chosen_roles = random.sample(roles, k=random.randint(1, len(roles)))
+        for role in chosen_roles:
+            if role not in emp.roles:
+                emp.roles.append(role)
+
+        employees.append(emp)
+
     db.add_all(employees)
     db.commit()
 
-    # Return HTML with 5-second redirect
     html_content = f"""
     <html>
         <head>
             <meta http-equiv="refresh" content="2;url=/" />
             <style>
-                body {{
-                    background-color: #121212; /* Dark black background */
-                    color: #00FFAA;           /* Neon green text for contrast */
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    height: 100vh;
-                    font-family: 'Arial', sans-serif;
-                    flex-direction: column;
-                    text-align: center;
-                    margin: 0;
-                }}
-                h2 {{
-                    font-size: 2em;
-                    margin-bottom: 20px;
-                }}
-                p {{
-                    font-size: 1.2em;
-                    color: #FFD700; /* Gold for the paragraph */
-                }}
-                a {{
-                    color: #1E90FF; /* Dodger blue for links */
-                    text-decoration: none;
-                    font-weight: bold;
-                }}
-                a:hover {{
-                    text-decoration: underline;
-                }}
+                body {{ background-color:#121212; color:#00FFAA; display:flex; justify-content:center; align-items:center; height:100vh; font-family:'Arial',sans-serif; flex-direction:column; text-align:center; margin:0; }}
+                h2 {{ font-size:2em; margin-bottom:20px; }}
+                p {{ font-size:1.2em; color:#FFD700; }}
+                a {{ color:#1E90FF; text-decoration:none; font-weight:bold; }}
+                a:hover {{ text-decoration:underline; }}
             </style>
         </head>
         <body>
@@ -331,47 +370,87 @@ def seed_data(n_departments: int = Form(5), n_employees: int = Form(50), db: Ses
     """
     return HTMLResponse(content=html_content)
 
+from sqlalchemy import create_engine, func, or_, and_, case
+
+
 # ----------------------------
-# Templates
+# Query endpoints
 # ----------------------------
-templates = Jinja2Templates(directory="templates")
-
-# Store query results
-query_results = []
-
-@seed_router.get("/", response_class=HTMLResponse)
-def index(request: Request, db: Session = Depends(get_db)):
-    departments = db.query(Department).all()
-    employees = db.query(Employee).all()
-    return templates.TemplateResponse("index.html", {
-        "request": request,
-        "departments": departments,
-        "employees": employees,
-        "results": query_results
-    })
-
 @seed_router.post("/run-query")
 def run_query(request: Request, query: str = Form(...), db: Session = Depends(get_db)):
     global query_results
-    # Split multiple queries by newline
-    queries = [q.strip() for q in query.splitlines() if q.strip()]
-    for q in queries:
-        try:
-            # Evaluate ORM query (admin only, trusted input)
-            rows = eval(q)  # ⚠ Only trusted queries
-            result = []
+
+    context = {
+        "db": db,
+        "Employee": Employee,
+        "Department": Department,
+        "Project": Project,
+        "Role": Role,
+        "func": func,
+        "date": date,
+        "timedelta": timedelta,
+        "or_": or_,
+        "and_": and_,
+        "case": case
+    }
+
+    def serialize_row(row):
+        if hasattr(row, "__dict__"):
+            d = row.__dict__.copy()
+            d.pop("_sa_instance_state", None)
+            for k, v in d.items():
+                if isinstance(v, (date,)):
+                    d[k] = v.isoformat()
+            return d
+        elif isinstance(row, dict):
+            for k, v in row.items():
+                if isinstance(v, (date,)):
+                    row[k] = v.isoformat()
+            return row
+        else:
+            return {"value": str(row)}
+
+    try:
+        rows = eval(query, {}, context)
+        result = []
+
+        if isinstance(rows, list):
             for r in rows:
-                if hasattr(r, '__dict__'):
-                    d = r.__dict__.copy()
-                    d.pop('_sa_instance_state', None)
-                    result.append(d)
-                elif isinstance(r, dict):
-                    result.append(r)
-                else:
-                    result.append({"value": str(r)})
-            query_results.append({"query": q, "result": result, "error": None})
-        except Exception as e:
-            query_results.append({"query": q, "result": None, "error": str(e)})
+                result.append(serialize_row(r))
+        else:
+            result.append(serialize_row(rows))
+
+        save_query_record(query, True, result=result)
+        query_results.append({"query": query, "result": result, "error": None})
+
+    except Exception as e:
+        save_query_record(query, False, error=str(e))
+        query_results.append({"query": query, "result": None, "error": str(e)})
+
+    departments = db.query(Department).all()
+    employees = db.query(Employee).all()
+    stored_queries = load_queries()
+    total_result = {
+        "request": request,
+        "departments": departments,
+        "employees": employees,
+        "results": query_results,
+        "stored_queries": stored_queries
+    }
+    print("RUNNNNNNNNNNNNNNNN", total_result)
+    return templates.TemplateResponse("index.html", total_result)
+
+
+@seed_router.post("/update-queries")
+async def update_queries(request: Request, db: Session = Depends(get_db)):
+    """Update only query strings; do not modify results, success, or error fields"""
+    form = await request.form()
+    stored_queries = load_queries()
+    for q in stored_queries:
+        key = f"query_{q['id']}"
+        if key in form:
+            q['query'] = form[key]
+    save_queries(stored_queries)
 
     departments = db.query(Department).all()
     employees = db.query(Employee).all()
@@ -379,7 +458,8 @@ def run_query(request: Request, query: str = Form(...), db: Session = Depends(ge
         "request": request,
         "departments": departments,
         "employees": employees,
-        "results": query_results
+        "results": query_results,
+        "stored_queries": stored_queries
     })
 
 
@@ -389,17 +469,42 @@ def clear_results(request: Request, db: Session = Depends(get_db)):
     query_results.clear()
     departments = db.query(Department).all()
     employees = db.query(Employee).all()
+    stored_queries = load_queries()
     return templates.TemplateResponse("index.html", {
         "request": request,
         "departments": departments,
         "employees": employees,
-        "results": query_results
+        "results": query_results,
+        "stored_queries": stored_queries
+    })
+
+
+@seed_router.get("/download-results", response_class=FileResponse)
+def download_results():
+    if not os.path.exists(QUERY_FILE):
+        with open(QUERY_FILE, "w") as f:
+            json.dump([], f, indent=4)
+    return FileResponse(QUERY_FILE, media_type="application/json", filename="query_results.json")
+
+# ----------------------------
+# Home Page
+# ----------------------------
+@app.get("/", response_class=HTMLResponse)
+def home(request: Request, db: Session = Depends(get_db)):
+    departments = db.query(Department).all()
+    employees = db.query(Employee).all()
+    stored_queries = load_queries()
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "departments": departments,
+        "employees": employees,
+        "results": query_results,
+        "stored_queries": stored_queries
     })
 
 # ----------------------------
-# FastAPI App
+# Include Routers
 # ----------------------------
-fastapi_app = FastAPI(title="Employee & Department CRUD")
-fastapi_app.include_router(employee_router)
-fastapi_app.include_router(department_router)
-fastapi_app.include_router(seed_router)
+app.include_router(employee_router)
+app.include_router(department_router)
+app.include_router(seed_router)
