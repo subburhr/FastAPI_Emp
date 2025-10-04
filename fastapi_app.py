@@ -1,5 +1,6 @@
-# fastapi_app.py
-from fastapi import FastAPI, APIRouter, Depends, HTTPException
+from fastapi import FastAPI, APIRouter, Depends, HTTPException, Request, Form
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 from sqlalchemy import Column, Integer, String, ForeignKey, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session, relationship
@@ -41,7 +42,6 @@ class Employee(Base):
     dep_id = Column(Integer, ForeignKey("departments.id"))
     department = relationship("Department", back_populates="employees")
 
-# Create tables
 Base.metadata.create_all(bind=engine)
 
 # ----------------------------
@@ -226,42 +226,99 @@ class SeedRequest(BaseModel):
 seed_router = APIRouter(tags=["Utility"])
 
 @seed_router.post("/seed-data")
-def seed_data(payload: SeedRequest, db: Session = Depends(get_db)):
+def seed_data(n_departments: int = Form(5), n_employees: int = Form(50), db: Session = Depends(get_db)):
     fake = Faker()
-
-    # Clear old data
     db.query(Employee).delete()
     db.query(Department).delete()
     db.commit()
 
-    # Departments
     dep_names = ["HR","Finance","IT","Sales","Marketing","Support","Operations"]
-    departments = [Department(name=name) for name in dep_names[:payload.n_departments]]
+    departments = [Department(name=name) for name in dep_names[:n_departments]]
     db.add_all(departments)
     db.commit()
 
     dep_ids = [d.id for d in db.query(Department).all()]
 
-    # Employees
     employees = []
-    for _ in range(payload.n_employees):
-        employees.append(
-            Employee(
-                name=fake.first_name(),
-                age=random.randint(22,55),
-                dep_id=random.choice(dep_ids)
-            )
-        )
+    for _ in range(n_employees):
+        employees.append(Employee(
+            name=fake.first_name(),
+            age=random.randint(22,55),
+            dep_id=random.choice(dep_ids)
+        ))
     db.add_all(employees)
     db.commit()
+    return {"detail": f"Seeded {n_departments} Departments & {n_employees} Employees"}
 
-    return {"detail": f"Seeded {payload.n_departments} Departments & {payload.n_employees} Employees"}
+# ----------------------------
+# Templates
+# ----------------------------
+templates = Jinja2Templates(directory="templates")
+
+# Store query results
+query_results = []
+
+@seed_router.get("/", response_class=HTMLResponse)
+def index(request: Request, db: Session = Depends(get_db)):
+    departments = db.query(Department).all()
+    employees = db.query(Employee).all()
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "departments": departments,
+        "employees": employees,
+        "results": query_results
+    })
+
+@seed_router.post("/run-query")
+def run_query(request: Request, query: str = Form(...), db: Session = Depends(get_db)):
+    global query_results
+    # Split multiple queries by newline
+    queries = [q.strip() for q in query.splitlines() if q.strip()]
+    for q in queries:
+        try:
+            # Evaluate ORM query (admin only, trusted input)
+            rows = eval(q)  # ⚠ Only trusted queries
+            result = []
+            for r in rows:
+                if hasattr(r, '__dict__'):
+                    d = r.__dict__.copy()
+                    d.pop('_sa_instance_state', None)
+                    result.append(d)
+                elif isinstance(r, dict):
+                    result.append(r)
+                else:
+                    result.append({"value": str(r)})
+            query_results.append({"query": q, "result": result, "error": None})
+        except Exception as e:
+            query_results.append({"query": q, "result": None, "error": str(e)})
+
+    departments = db.query(Department).all()
+    employees = db.query(Employee).all()
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "departments": departments,
+        "employees": employees,
+        "results": query_results
+    })
+
+
+@seed_router.post("/clear-results")
+def clear_results(request: Request, db: Session = Depends(get_db)):
+    global query_results
+    query_results.clear()
+    departments = db.query(Department).all()
+    employees = db.query(Employee).all()
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "departments": departments,
+        "employees": employees,
+        "results": query_results
+    })
 
 # ----------------------------
 # FastAPI App
 # ----------------------------
 fastapi_app = FastAPI(title="Employee & Department CRUD")
-
 fastapi_app.include_router(employee_router)
 fastapi_app.include_router(department_router)
 fastapi_app.include_router(seed_router)
