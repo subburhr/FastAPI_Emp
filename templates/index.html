@@ -1,203 +1,577 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Employee & Department Viewer — Dark</title>
-
+    <meta charset="UTF-8">
+    <title>Employee & Department Dashboard</title>
 <style>
+/* 🌑 General Styles */
 body {
-    background: #0b0f12;
-    color: #e6e6e6;
-    font-family: Arial,sans-serif;
-    margin:0; padding:0;
+    background-color: #000; /* pure black background */
+    color: #f0f0f0;
+    font-family: "Segoe UI", Tahoma, sans-serif;
+    margin: 0;
+    padding: 0;
 }
-.container { max-width:1200px; margin:20px auto; padding:20px; }
-h1 { color:#7cdbb6; }
-h2 { color:#7aa2ff; }
-.small { font-size:14px; color:#b5b5b5; }
+h1, h2 {
+    color: #00e5ff;
+    margin-bottom: 15px;
+    text-shadow: 1px 1px 5px #000;
+}
+main {
+    padding: 30px;
+    max-width: 1600px;
+    margin: auto;
+}
 
-.btn { background:#222; color:#fff; border:1px solid #555; padding:6px 12px; margin:5px; border-radius:6px; cursor:pointer; }
-.btn.primary { background:#7cdbb6; color:#000; border:none; }
+/* 💳 Card Layout */
+.flex-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 1rem;
+}
+.card {
+    background-color: #111;
+    border: 1px solid #222;
+    border-radius: 12px;
+    padding: 20px;
+    flex: 1;
+    min-width: 46%;
+    overflow-x: auto;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0,255,255,0.3);
+}
 
-.tables-container { display:flex; gap:20px; flex-wrap:wrap; }
-.table-section { flex:1 1 45%; min-width:300px; }
+/* 📊 Tables */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+th, td {
+    border: 1px solid #222;
+    padding: 10px 12px;
+    text-align: left;
+}
+th {
+    background: #222;
+    color: #00e5ff;
+}
+tr:hover {
+    background: #00575b;
+    transition: background 0.3s;
+    cursor: pointer;
+}
+.highlight {
+    background: #00e5ff !important;
+    color: #000;
+}
 
-table { width:100%; border-collapse:collapse; margin-top:10px; background:#111; }
-th, td { border:1px solid #333; padding:6px; text-align:left; }
-th { background:#222; color:#7cdbb6; }
+/* 📝 Forms */
+form {
+    background: #111;
+    border: 1px solid #222;
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 10px rgba(0,255,255,0.2);
+}
+textarea, input {
+    background: #222;
+    color: #f0f0f0;
+    border: 1px solid #333;
+    border-radius: 6px;
+    width: 100%;
+    padding: 10px;
+    font-family: monospace;
+    resize: vertical;
+    min-height: 50px;
+    transition: border 0.2s, box-shadow 0.2s;
+}
+textarea:focus, input:focus {
+    border: 1px solid #00e5ff;
+    box-shadow: 0 0 8px #00e5ff;
+    outline: none;
+}
+button {
+    background-color: #222;
+    color: #00e5ff;
+    border: 1px solid #00e5ff;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: 0.2s;
+    margin-right: 8px;
+}
+button:hover {
+    background-color: #00e5ff;
+    color: #000;
+}
 
-textarea { width:100%; min-height:120px; background:#111; color:#7ce0ff; border:1px solid #333; border-radius:6px; padding:8px; font-family:monospace; }
+/* 🔹 Section Titles */
+.section-title {
+    border-bottom: 1px solid #00e5ff;
+    padding-bottom: 5px;
+    margin-bottom: 15px;
+    color: #00e5ff;
+}
 
-.results { margin-top:20px; }
-.result-card { background:#111; border:1px solid #333; padding:10px; margin:10px 0; border-radius:6px; }
-.result-table { width:100%; border-collapse:collapse; margin-top:6px; cursor:pointer; }
-.result-table th { background:#222; color:#ffcd4d; }
-.result-table td { border:1px solid #333; padding:6px; color:#cfe8ff; }
+/* 🗂 Section Cards */
+.section-card {
+    display: none;
+    margin-top: 20px;
+}
+.section-card.active {
+    display: block !important;
+}
 
-.highlight { background:#444 !important; color:#fff !important; transition: background 0.5s ease; }
-.hidden { display:none; }
-.toolbar { margin-bottom:15px; }
-.result-controls { margin-top:5px; display:flex; gap:5px; flex-wrap:wrap; }
-</style>
-</head>
+/* 🔘 Section Navigation Circles */
+.section-circles,
+.query-circles {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+.circle {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    background-color: #222;
+    color: #00e5ff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 16px;
+    transition: 0.3s;
+}
+.circle.active,
+.circle:hover {
+    background-color: #00e5ff;
+    color: #000;
+    box-shadow: 0 0 8px #00e5ff;
+}
 
-<body>
-<div class="container">
-<h1>Employee & Department Viewer</h1>
-<p class="small">Admin panel — run SQLAlchemy ORM expressions (admin only). Results persist until you click Clear.</p>
+/* 💾 Stored Queries */
+.query-card, .result-card {
+    background: #111;
+    border: 1px solid #222;
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 4px 10px rgba(0,255,255,0.2);
+    margin-top: 15px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.query-card:hover, .result-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(0,255,255,0.3);
+}
+.result-header {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    align-items: center;
+}
+.result-header code {
+    background: #222;
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+.success {
+    color: #6f6;
+    font-weight: bold;
+}
+.error {
+    color: #f66;
+    font-weight: bold;
+}
+.no-results {
+    text-align: center;
+    color: #999;
+    font-style: italic;
+}
+a {
+    color: #00e5ff;
+    text-decoration: none;
+}
+a:hover {
+    text-decoration: underline;
+}
 
-<div class="toolbar">
-<button class="btn" id="toggle-all" type="button" onclick="toggleAll()">Collapse Tables</button>
-</div>
-
-<div class="tables-container">
-  <section id="departments" class="table-section">
-    <h2>Departments</h2>
-    <table id="dept-table">
-      <thead><tr><th>ID</th><th>Name</th></tr></thead>
-      <tbody>
-      {% for d in departments %}
-        <tr><td>{{ d.id }}</td><td>{{ d.name }}</td></tr>
-      {% else %}
-        <tr><td colspan="2">No departments</td></tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </section>
-
-  <section id="employees" class="table-section">
-    <h2>Employees</h2>
-    <table id="emp-table">
-      <thead><tr><th>ID</th><th>Name</th><th>Age</th><th>Department</th></tr></thead>
-      <tbody>
-      {% for e in employees %}
-        <tr>
-          <td>{{ e.id }}</td>
-          <td>{{ e.name }}</td>
-          <td>{{ e.age if e.age else '' }}</td>
-          <td>{{ e.department.name if e.department else '' }}</td>
-        </tr>
-      {% else %}
-        <tr><td colspan="4">No employees</td></tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </section>
-</div>
-
-<h2>Seed Data</h2>
-<form method="post" action="/seed-data">
-<label>Departments: <input type="number" name="n_departments" value="5" min="1" /></label>
-<label>Employees: <input type="number" name="n_employees" value="50" min="1" /></label>
-<button class="btn primary" type="submit">Seed</button>
-</form>
-
-<h2>Run ORM Query</h2>
-<form method="post" action="/run-query">
-<textarea name="query" placeholder='Example: db.query(Employee).filter(Employee.age > 30).all()'></textarea>
-<div>
-<button class="btn primary" type="submit">Run</button>
-<button class="btn" type="submit" formaction="/clear-results">Clear</button>
-</div>
-</form>
-
-<div class="results">
-<h2>Query Results</h2>
-{% if results %}
-{% for r in results %}
-<div class="result-card">
-<div class="result-controls">
-<strong>Query:</strong> {{ r.query }}
-<button class="btn" onclick="clearResult(this)">Clear</button>
-<button class="btn" onclick="toggleResult(this)">Collapse/Expand</button>
-</div>
-{% if r.error %}
-<span style="color:#ff6b6b;"><strong>Error:</strong> {{ r.error }}</span>
-{% elif r.result and r.result|length > 0 %}
-<table class="result-table">
-<thead>
-<tr>
-{% for key in r.result[0].keys() %}
-<th>{{ key }}</th>
-{% endfor %}
-</tr>
-</thead>
-<tbody>
-{% for row in r.result %}
-<tr>
-{% for val in row.values() %}
-<td>{{ val }}</td>
-{% endfor %}
-</tr>
-{% endfor %}
-</tbody>
-</table>
-{% else %}
-<p class="small">No results for this query.</p>
-{% endif %}
-</div>
-{% endfor %}
-{% else %}
-<p class="small">No results yet.</p>
-{% endif %}
-</div>
-</div>
-
-<script>
-function toggleAll(){
-    const depts = document.getElementById('departments');
-    const emps = document.getElementById('employees');
-    const btn = document.getElementById('toggle-all');
-    const hidden = depts.classList.contains('hidden');
-    if(hidden){
-        depts.classList.remove('hidden');
-        emps.classList.remove('hidden');
-        btn.textContent="Collapse Tables";
-    } else {
-        depts.classList.add('hidden');
-        emps.classList.add('hidden');
-        btn.textContent="Expand Tables";
+/* 📱 Responsive */
+@media (max-width: 900px) {
+    .card {
+        min-width: 100%;
+    }
+    .circle {
+        width: 40px;
+        height: 40px;
     }
 }
+</style>
 
-function clearHighlights() {
-    document.querySelectorAll('#dept-table tr, #emp-table tr, .result-table tr').forEach(r=>r.classList.remove('highlight'));
-}
 
-document.querySelectorAll('.result-table').forEach(table=>{
-    table.addEventListener('click', ()=>{
-        clearHighlights();
-        // Highlight the clicked query table
-        table.querySelectorAll('tr').forEach(r=>r.classList.add('highlight'));
+ <script>
+    // 🔹 Highlight selected table rows
+    function highlightRow(id) {
+        document.querySelectorAll('.highlight').forEach(el => el.classList.remove('highlight'));
+        document.querySelectorAll(`[data-id='${id}']`).forEach(el => el.classList.add('highlight'));
+    }
 
-        const rows = table.querySelectorAll('tbody tr');
-        rows.forEach(r=>{
-            const values = Array.from(r.cells).map(c=>c.textContent.trim());
-            document.querySelectorAll('#dept-table tbody tr').forEach(orig=>{
-                const origValues = Array.from(orig.cells).map(c=>c.textContent.trim());
-                if(values.every(v=>origValues.includes(v))) orig.classList.add('highlight');
-            });
-            document.querySelectorAll('#emp-table tbody tr').forEach(orig=>{
-                const origValues = Array.from(orig.cells).map(c=>c.textContent.trim());
-                if(values.every(v=>origValues.includes(v))) orig.classList.add('highlight');
+    // 🔹 Run stored query dynamically
+    function runStoredQuery(id) {
+        const queryText = document.getElementById(`query_text_${id}`)?.value;
+        localStorage.setItem('activeSection', 'section-stored'); // Remember last section
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = "/run-query";
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = "query";
+        input.value = queryText;
+        form.appendChild(input);
+        document.body.appendChild(form);
+        form.submit();
+    }
+
+    // 🔹 Stored Queries Navigation
+    const storedCards = [];
+    const storedCircles = [];
+
+    function initStoredQueries() {
+        const cards = document.querySelectorAll('.query-card');
+        const circles = document.querySelectorAll('.circle[data-id^="query-"]');
+
+        cards.forEach(c => {
+            storedCards.push(c);
+            c.style.display = 'none'; // hide all initially
+        });
+        circles.forEach(c => storedCircles.push(c));
+
+        if (storedCards.length > 0) showStoredCard(storedCards[0].id);
+
+        storedCircles.forEach(circle => {
+            circle.addEventListener('click', () => showStoredCard(circle.dataset.id));
+        });
+    }
+
+    function showStoredCard(id) {
+        storedCards.forEach(c => c.style.display = 'none');
+        storedCircles.forEach(c => c.classList.remove('active'));
+
+        const card = storedCards.find(c => c.id === id);
+        if (card) card.style.display = 'block';
+
+        const circle = storedCircles.find(c => c.dataset.id === id);
+        if (circle) circle.classList.add('active');
+    }
+
+    // 🔹 Section Navigation (main circles)
+    const sectionCards = [];
+    const sectionCircles = [];
+
+    function initSections() {
+        const cards = document.querySelectorAll('.section-card');
+        const circles = document.querySelectorAll('.section-circles .circle');
+
+        cards.forEach(c => {
+            sectionCards.push(c);
+            c.style.display = 'none'; // hide all initially
+        });
+        circles.forEach(c => sectionCircles.push(c));
+
+        function showSection(id) {
+            sectionCards.forEach(c => c.style.display = 'none');
+            sectionCircles.forEach(c => c.classList.remove('active'));
+
+            const card = sectionCards.find(c => c.id === id);
+            if (card) card.style.display = 'block';
+
+            const circle = sectionCircles.find(c => c.dataset.id === id);
+            if (circle) circle.classList.add('active');
+
+            localStorage.setItem('activeSection', id);
+        }
+
+        // Restore last opened section, if any
+        const savedSection = localStorage.getItem('activeSection');
+        if (savedSection && sectionCards.some(c => c.id === savedSection)) {
+            showSection(savedSection);
+        }
+
+        // Add click listeners
+        sectionCircles.forEach(c => {
+            c.addEventListener('click', () => showSection(c.dataset.id));
+        });
+
+        // Save active section on form submit
+        document.querySelectorAll("form").forEach(form => {
+            form.addEventListener("submit", () => {
+                const activeCard = sectionCards.find(c => c.style.display === 'block');
+                if (activeCard) localStorage.setItem('activeSection', activeCard.id);
             });
         });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        initSections();       // main 5 sections
+        initStoredQueries();  // nested stored queries
     });
-});
-
-function clearResult(btn){
-    const card = btn.closest('.result-card');
-    card.remove();
-    clearHighlights();
-}
-
-function toggleResult(btn){
-    const card = btn.closest('.result-card');
-    const table = card.querySelector('table');
-    if(!table) return;
-    table.classList.toggle('hidden');
-}
 </script>
+
+
+</head>
+<body>
+<main>
+    <h1>💼 Employee & Department Dashboard</h1>
+
+    <!-- Section Navigation Circles -->
+    <div class="section-circles">
+        <div class="circle" data-id="section-departments">1</div>
+        <div class="circle" data-id="section-employees">2</div>
+        <div class="circle" data-id="section-seed">3</div>
+        <div class="circle" data-id="section-query">4</div>
+        <div class="circle" data-id="section-stored">5</div>
+    </div>
+
+    <!-- Departments Section -->
+    <div class="section-card" id="section-departments">
+        <div class="card">
+            <h2>🏢 Departments</h2>
+            {% if departments %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Location</th>
+                            <th>Budget</th>
+                            <th>#Employees</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in departments %}
+                        <tr data-id="dep-{{ d.id }}">
+                            <td>{{ d.id }}</td>
+                            <td>{{ d.name }}</td>
+                            <td>{{ d.location }}</td>
+                            <td>{{ d.budget }}</td>
+                            <td>{{ d.employees|length }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>No departments found.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Employees Section -->
+    <div class="section-card" id="section-employees">
+        <div class="card">
+            <h2>👨‍💼 Employees</h2>
+            {% if employees %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th><th>Name</th><th>Age</th><th>Email</th>
+                            <th>Salary</th><th>Bonus</th><th>Hire Date</th>
+                            <th>Active</th><th>Gender</th><th>Department</th><th>Manager</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for e in employees %}
+                        <tr data-id="emp-{{ e.id }}">
+                            <td>{{ e.id }}</td>
+                            <td>{{ e.name }}</td>
+                            <td>{{ e.age or '' }}</td>
+                            <td>{{ e.email }}</td>
+                            <td>{{ e.salary }}</td>
+                            <td>{{ e.bonus }}</td>
+                            <td>{{ e.hire_date }}</td>
+                            <td>{{ "✅" if e.active else "❌" }}</td>
+                            <td>{{ e.gender }}</td>
+                            <td>{{ e.department.name if e.department else '' }}</td>
+                            <td>{{ e.manager.name if e.manager else '' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>No employees found.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Seed Data Section -->
+    <div class="section-card" id="section-seed">
+        <section class="section">
+            <h2 class="section-title">🧰 Seed Data</h2>
+            <form action="/seed-data" method="post">
+                <label>Departments: <input type="number" name="n_departments" value="5"></label><br><br>
+                <label>Employees: <input type="number" name="n_employees" value="50"></label><br><br>
+                <button type="submit">Seed Database</button>
+            </form>
+        </section>
+    </div>
+
+    <!-- ORM Query Section -->
+    <div class="section-card" id="section-query">
+        <section class="section">
+            <h2 class="section-title">🧠 Run ORM Query</h2>
+            <form action="/run-query" method="post">
+                <textarea name="query" rows="3" placeholder="Example: db.query(Employee).filter(Employee.age > 30).all()"></textarea><br>
+                <button type="submit">Run Query</button>
+                <button formaction="/clear-results" formmethod="post">Clear All Results</button>
+                <a href="/download-results">📥 Download JSON</a>
+            </form>
+            {% if results and results|length > 0 %}
+                {% set latest = results[-1] %}
+                <div class="result-card">
+                    <div class="result-header">
+                        <div><strong>Executed Query:</strong> <code>{{ latest.query }}</code></div>
+                        {% if latest.error %}
+                            <span class="error">❌ {{ latest.error }}</span>
+                        {% else %}
+                            <span class="success">✅ Success</span>
+                        {% endif %}
+                    </div>
+                    {% if latest.result %}
+                    <div class="result-body">
+                        <table>
+                            <thead>
+                                {% set first_row = latest.result[0] if latest.result else None %}
+                                {% if first_row %}
+                                <tr>
+                                    {% for key in first_row.keys() %}
+                                    <th>{{ key }}</th>
+                                    {% endfor %}
+                                </tr>
+                                {% endif %}
+                            </thead>
+                            <tbody>
+                                {% for row in latest.result %}
+                                <tr onclick="highlightRow('emp-{{ row.id if 'id' in row else '' }}')">
+                                    {% for val in row.values() %}
+                                    <td>{{ val if val is not none else '' }}</td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                        <p class="no-results">No data returned.</p>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </section>
+    </div>
+
+    <!-- Stored Queries Section -->
+    <div class="section-card" id="section-stored">
+        <section class="section">
+            <h2 class="section-title">💾 Stored Queries</h2>
+            {% if stored_queries %}
+            <div class="query-circles" id="query-circles">
+                {% for q in stored_queries %}
+                <div class="circle" data-id="query-{{ q.id }}">{{ loop.index }}</div>
+                {% endfor %}
+            </div>
+
+            <form action="/update-queries" method="post">
+                <div class="query-details" id="query-details">
+                    {% for q in stored_queries %}
+                    <div class="query-card" id="query-{{ q.id }}">
+                        <label><strong>Query {{ loop.index }}:</strong></label>
+                        <textarea id="query_text_{{ q.id }}" name="query_{{ q.id }}">{{ q.query }}</textarea><br>
+                        <button type="button" onclick="runStoredQuery({{ q.id }})">▶ Run</button>
+                        <button formaction="/clear-results" formmethod="post">Clear All Results</button>
+                        <button type="submit">💾 Save Changes</button>
+
+                        {% if q.result %}
+                        <div class="result-body" id="result-{{ q.id }}">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        {% for key in q.result[0].keys() %}
+                                        <th>{{ key }}</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in q.result %}
+                                    <tr>
+                                        {% for val in row.values() %}
+                                        <td>{{ val }}</td>
+                                        {% endfor %}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="result-body" id="result-{{ q.id }}" style="display:none;"></div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </form>
+            {% else %}
+            <p>No stored queries found.</p>
+            {% endif %}
+
+           {% if results and results|length > 0 %}
+                {% set latest = results[-1] %}
+                <div class="result-card">
+                    <div class="result-header">
+                        <div><strong>Executed Query:</strong> <code>{{ latest.query }}</code></div>
+                        {% if latest.error %}
+                            <span class="error">❌ {{ latest.error }}</span>
+                        {% else %}
+                            <span class="success">✅ Success</span>
+                        {% endif %}
+                    </div>
+                    {% if latest.result %}
+                    <div class="result-body">
+                        <table>
+                            <thead>
+                                {% set first_row = latest.result[0] if latest.result else None %}
+                                {% if first_row %}
+                                <tr>
+                                    {% for key in first_row.keys() %}
+                                    <th>{{ key }}</th>
+                                    {% endfor %}
+                                </tr>
+                                {% endif %}
+                            </thead>
+                            <tbody>
+                                {% for row in latest.result %}
+                                <tr onclick="highlightRow('emp-{{ row.id if 'id' in row else '' }}')">
+                                    {% for val in row.values() %}
+                                    <td>{{ val if val is not none else '' }}</td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                        <p class="no-results">No data returned.</p>
+                    {% endif %}
+                </div>
+            {% endif %}
+          
+
+        </section>
+    </div>
+</main>
 </body>
 </html>
