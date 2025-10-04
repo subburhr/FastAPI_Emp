@@ -1,0 +1,958 @@
+[
+    {
+        "id": 1,
+        "query": "db.query(Employee).all()"
+    },
+    {
+        "id": 2,
+        "query": "db.query(Employee).filter(Employee.id == emp_id).first()"
+    },
+    {
+        "id": 3,
+        "query": "db.query(Employee).filter(Employee.name.like(f\"%{name}%\")).all()"
+    },
+    {
+        "id": 4,
+        "query": "db.query(Employee).filter(Employee.age.between(start_age, end_age)).all()"
+    },
+    {
+        "id": 5,
+        "query": "db.query(Employee).filter(Employee.active == True).all()"
+    },
+    {
+        "id": 6,
+        "query": "db.query(Employee).filter(Employee.dep_id == dep_id).all()"
+    },
+    {
+        "id": 7,
+        "query": "db.query(func.count(Employee.id)).scalar()"
+    },
+    {
+        "id": 8,
+        "query": "db.query(func.max(Employee.salary)).scalar()"
+    },
+    {
+        "id": 9,
+        "query": "db.query(func.min(Employee.salary)).scalar()"
+    },
+    {
+        "id": 10,
+        "query": "db.query(func.avg(Employee.salary)).scalar()"
+    },
+    {
+        "id": 11,
+        "query": "db.query(Department).all()"
+    },
+    {
+        "id": 12,
+        "query": "db.query(Department).filter(Department.id == dep_id).first()"
+    },
+    {
+        "id": 13,
+        "query": "db.query(func.count(Department.id)).scalar()"
+    },
+    {
+        "id": 14,
+        "query": "db.query(Department).order_by(Department.name).all()"
+    },
+    {
+        "id": 15,
+        "query": "db.query(Employee).filter(Employee.salary > x).all()"
+    },
+    {
+        "id": 16,
+        "query": "db.query(Employee).filter(Employee.hire_date >= date.today() - timedelta(days=days)).all()"
+    },
+    {
+        "id": 17,
+        "query": "db.query(Employee).filter(Employee.manager_id == None).all()"
+    },
+    {
+        "id": 18,
+        "query": "db.query(Employee).filter(Employee.subordinates.any()).all()"
+    },
+    {
+        "id": 19,
+        "query": "db.query(Employee).filter(or_(Employee.age < 25, Employee.salary > 5000)).all()"
+    },
+    {
+        "id": 20,
+        "query": "db.query(Employee).filter(and_(Employee.age > 30, Employee.active == True)).all()"
+    },
+    {
+        "id": 21,
+        "query": "db.query(Employee, Department).join(Department).all()"
+    },
+    {
+        "id": 22,
+        "query": "db.query(Employee).outerjoin(Department).all()"
+    },
+    {
+        "id": 23,
+        "query": "db.query(Employee).join(Employee.manager).all()"
+    },
+    {
+        "id": 24,
+        "query": "db.query(Employee).join(Employee.projects).all()"
+    },
+    {
+        "id": 25,
+        "query": "db.query(Employee).join(Employee.roles).all()"
+    },
+    {
+        "id": 26,
+        "query": "db.query(Department.name, func.count(Employee.id)).join(Employee).group_by(Department.id).all()"
+    },
+    {
+        "id": 27,
+        "query": "db.query(Employee.salary, func.count(Employee.id)).group_by(Employee.salary).all()"
+    },
+    {
+        "id": 28,
+        "query": "db.query(Employee.name, func.sum(Employee.salary + Employee.bonus)).group_by(Employee.id).all()"
+    },
+    {
+        "id": 29,
+        "query": "db.query(Department.name, func.avg(Employee.salary)).join(Employee).group_by(Department.id).all()"
+    },
+    {
+        "id": 30,
+        "query": "db.query(Employee).order_by(Employee.salary.desc()).all()"
+    },
+    {
+        "id": 31,
+        "query": "db.query(Employee).offset(offset).limit(limit).all()"
+    },
+    {
+        "id": 32,
+        "query": "db.query(Employee).filter(Employee.name.like(\"A%\")).all()"
+    },
+    {
+        "id": 33,
+        "query": "db.query(Employee).filter(Employee.email.contains(\"@gmail.com\")).all()"
+    },
+    {
+        "id": 34,
+        "query": "db.query(Employee).distinct(Employee.age).all()"
+    },
+    {
+        "id": 35,
+        "query": "db.query(Employee).filter(Employee.hire_date.between(date(2020, 1, 1), date(2021, 12, 31))).all()"
+    },
+    {
+        "id": 36,
+        "query": "db.query(Employee).filter(Employee.email.ilike('%yahoo.com%')).all()"
+    },
+    {
+        "id": 37,
+        "query": "db.query(Employee).filter(Employee.salary > db.query(func.avg(Employee.salary))).all()"
+    },
+    {
+        "id": 38,
+        "query": "db.query(Employee).filter(Employee.dep_id.in_(db.query(Department.id).filter(Department.budget > 100000))).all()"
+    },
+    {
+        "id": 39,
+        "query": "db.query(Employee).filter(Employee.hire_date == db.query(func.min(Employee.hire_date))).all()"
+    },
+    {
+        "id": 40,
+        "query": "db.query(Employee.name, case((Employee.salary > 7000, 'High'), (Employee.salary > 4000, 'Medium'), else_='Low')).label('salary_band')).all()"
+    },
+    {
+        "id": 41,
+        "query": "db.query(Employee.name, case((Employee.age < 25, 'Junior'), (Employee.age.between(25,45), 'Mid'), else_='Senior')).label('experience_level')).all()"
+    },
+    {
+        "id": 42,
+        "query": "db.query(Employee.name, func.rank().over(order_by=Employee.salary.desc())).all()"
+    },
+    {
+        "id": 43,
+        "query": "db.query(Employee.name, func.row_number().over(order_by=Employee.salary.desc())).all()"
+    },
+    {
+        "id": 44,
+        "query": "db.query(Employee.name, func.lag(Employee.salary).over(order_by=Employee.salary)).all()"
+    },
+    {
+        "id": 45,
+        "query": "db.query(Employee.name, func.lead(Employee.salary).over(order_by=Employee.salary)).all()"
+    },
+    {
+        "id": 46,
+        "query": "db.query(Employee.name, func.sum(Employee.salary).over(partition_by=Employee.dep_id)).all()"
+    },
+    {
+        "id": 47,
+        "query": "db.query(Employee).filter(Employee.last_login == date.today()).all()"
+    },
+    {
+        "id": 48,
+        "query": "db.query(Employee).filter(Employee.absent_days > 5).all()"
+    },
+    {
+        "id": 49,
+        "query": "db.query(Employee).filter(Employee.overtime_hours > 10).all()"
+    },
+    {
+        "id": 50,
+        "query": "db.query(Employee).filter(Employee.performance_score > 90).all()"
+    },
+    {
+        "id": 51,
+        "query": "db.query(Employee).filter(Employee.training_completed == False).all()"
+    },
+    {
+        "id": 52,
+        "query": "db.query(Employee).filter(Employee.promotion_due == True).all()"
+    },
+    {
+        "id": 53,
+        "query": "db.query(Employee).filter(Employee.contract_end < date.today() + timedelta(days=60)).all()"
+    },
+    {
+        "id": 54,
+        "query": "db.query(Employee).filter(Employee.transfer_requested == True, Employee.performance_score > 75).all()"
+    },
+    {
+        "id": 55,
+        "query": "db.query(Employee).filter(Employee.active == False).delete()"
+    },
+    {
+        "id": 56,
+        "query": "db.query(Employee).filter(Employee.salary < 3000).update({Employee.salary: 3000})"
+    },
+    {
+        "id": 57,
+        "query": "db.query(Employee).filter(Employee.bonus == None).update({Employee.bonus: 0})"
+    },
+    {
+        "id": 58,
+        "query": "db.query(Employee).all()",
+        "success": true,
+        "result": [
+            {
+                "id": 1,
+                "email": "vanessahess@example.com",
+                "bonus": 4969.0,
+                "active": true,
+                "dep_id": 3,
+                "name": "Sharon",
+                "age": 35,
+                "salary": 105514.0,
+                "hire_date": "2023-01-03",
+                "gender": "F",
+                "manager_id": null
+            },
+            {
+                "id": 2,
+                "email": "cameron26@example.net",
+                "bonus": 9047.0,
+                "active": true,
+                "dep_id": 3,
+                "name": "Tiffany",
+                "age": 52,
+                "salary": 45460.0,
+                "hire_date": "2021-12-16",
+                "gender": "M",
+                "manager_id": null
+            },
+            {
+                "id": 3,
+                "email": "mayeduardo@example.net",
+                "bonus": 3698.0,
+                "active": true,
+                "dep_id": 2,
+                "name": "Julie",
+                "age": 32,
+                "salary": 68459.0,
+                "hire_date": "2023-04-27",
+                "gender": "F",
+                "manager_id": null
+            },
+            {
+                "id": 4,
+                "email": "fitzgeraldkyle@example.com",
+                "bonus": 2396.0,
+                "active": false,
+                "dep_id": 3,
+                "name": "Michael",
+                "age": 35,
+                "salary": 61782.0,
+                "hire_date": "2023-10-02",
+                "gender": "F",
+                "manager_id": null
+            },
+            {
+                "id": 5,
+                "email": "sclayton@example.org",
+                "bonus": 5492.0,
+                "active": false,
+                "dep_id": 4,
+                "name": "Gregory",
+                "age": 43,
+                "salary": 70472.0,
+                "hire_date": "2020-04-16",
+                "gender": "M",
+                "manager_id": null
+            },
+            {
+                "id": 6,
+                "email": "watsonapril@example.net",
+                "bonus": 5271.0,
+                "active": true,
+                "dep_id": 4,
+                "name": "Deanna",
+                "age": 39,
+                "salary": 97087.0,
+                "hire_date": "2022-11-15",
+                "gender": "F",
+                "manager_id": null
+            },
+            {
+                "id": 7,
+                "email": "joshua14@example.net",
+                "bonus": 4254.0,
+                "active": true,
+                "dep_id": 4,
+                "name": "Juan",
+                "age": 55,
+                "salary": 52226.0,
+                "hire_date": "2023-07-19",
+                "gender": "F",
+                "manager_id": null
+            },
+            {
+                "id": 8,
+                "email": "hernandezleah@example.com",
+                "bonus": 8403.0,
+                "active": true,
+                "dep_id": 1,
+                "name": "Ashley",
+                "age": 23,
+                "salary": 60432.0,
+                "hire_date": "2022-01-08",
+                "gender": "F",
+                "manager_id": null
+            },
+            {
+                "id": 9,
+                "email": "michael62@example.com",
+                "bonus": 5229.0,
+                "active": true,
+                "dep_id": 2,
+                "name": "Douglas",
+                "age": 46,
+                "salary": 73976.0,
+                "hire_date": "2020-10-24",
+                "gender": "M",
+                "manager_id": null
+            },
+            {
+                "id": 10,
+                "email": "alicia18@example.net",
+                "bonus": 3676.0,
+                "active": true,
+                "dep_id": 3,
+                "name": "Melvin",
+                "age": 25,
+                "salary": 100548.0,
+                "hire_date": "2024-04-14",
+                "gender": "F",
+                "manager_id": null
+            },
+            {
+                "id": 11,
+                "email": "aaron83@example.org",
+                "bonus": 5871.0,
+                "active": true,
+                "dep_id": 3,
+                "name": "Donna",
+                "age": 26,
+                "salary": 55731.0,
+                "hire_date": "2021-02-14",
+                "gender": "F",
+                "manager_id": null
+            },
+            {
+                "id": 12,
+                "email": "benjamin36@example.net",
+                "bonus": 7861.0,
+                "active": true,
+                "dep_id": 3,
+                "name": "Marcus",
+                "age": 40,
+                "salary": 44124.0,
+                "hire_date": "2020-12-21",
+                "gender": "F",
+                "manager_id": null
+            },
+            {
+                "id": 13,
+                "email": "alopez@example.com",
+                "bonus": 8731.0,
+                "active": true,
+                "dep_id": 1,
+                "name": "Stephanie",
+                "age": 32,
+                "salary": 105014.0,
+                "hire_date": "2023-12-26",
+                "gender": "M",
+                "manager_id": null
+            },
+            {
+                "id": 14,
+                "email": "goldenkimberly@example.net",
+                "bonus": 8105.0,
+                "active": true,
+                "dep_id": 1,
+                "name": "Jessica",
+                "age": 32,
+                "salary": 53789.0,
+                "hire_date": "2020-12-06",
+                "gender": "F",
+                "manager_id": null
+            },
+            {
+                "id": 15,
+                "email": "howardkaren@example.com",
+                "bonus": 6422.0,
+                "active": false,
+                "dep_id": 2,
+                "name": "Lydia",
+                "age": 36,
+                "salary": 48327.0,
+                "hire_date": "2020-07-14",
+                "gender": "M",
+                "manager_id": null
+            },
+            {
+                "id": 16,
+                "email": "malik37@example.com",
+                "bonus": 7316.0,
+                "active": true,
+                "dep_id": 3,
+                "name": "Virginia",
+                "age": 30,
+                "salary": 88745.0,
+                "hire_date": "2022-05-20",
+                "gender": "F",
+                "manager_id": null
+            },
+            {
+                "id": 17,
+                "email": "huntershane@example.com",
+                "bonus": 5225.0,
+                "active": true,
+                "dep_id": 5,
+                "name": "Kenneth",
+                "age": 48,
+                "salary": 34336.0,
+                "hire_date": "2021-10-26",
+                "gender": "F",
+                "manager_id": null
+            },
+            {
+                "id": 18,
+                "email": "pthomas@example.org",
+                "bonus": 2766.0,
+                "active": true,
+                "dep_id": 1,
+                "name": "Krystal",
+                "age": 25,
+                "salary": 47989.0,
+                "hire_date": "2022-10-30",
+                "gender": "M",
+                "manager_id": null
+            },
+            {
+                "id": 19,
+                "email": "wigginsmatthew@example.com",
+                "bonus": 2316.0,
+                "active": false,
+                "dep_id": 2,
+                "name": "Susan",
+                "age": 41,
+                "salary": 107550.0,
+                "hire_date": "2023-04-22",
+                "gender": "M",
+                "manager_id": null
+            },
+            {
+                "id": 20,
+                "email": "kent52@example.net",
+                "bonus": 9579.0,
+                "active": true,
+                "dep_id": 3,
+                "name": "Nicholas",
+                "age": 48,
+                "salary": 51158.0,
+                "hire_date": "2024-02-21",
+                "gender": "F",
+                "manager_id": null
+            },
+            {
+                "id": 21,
+                "email": "lcraig@example.net",
+                "bonus": 3486.0,
+                "active": true,
+                "dep_id": 4,
+                "name": "Max",
+                "age": 48,
+                "salary": 113174.0,
+                "hire_date": "2025-06-05",
+                "gender": "M",
+                "manager_id": null
+            },
+            {
+                "id": 22,
+                "email": "keithbrianna@example.net",
+                "bonus": 2644.0,
+                "active": true,
+                "dep_id": 2,
+                "name": "Mitchell",
+                "age": 45,
+                "salary": 82126.0,
+                "hire_date": "2022-10-05",
+                "gender": "F",
+                "manager_id": null
+            },
+            {
+                "id": 23,
+                "email": "swalsh@example.com",
+                "bonus": 4345.0,
+                "active": false,
+                "dep_id": 4,
+                "name": "April",
+                "age": 28,
+                "salary": 84277.0,
+                "hire_date": "2023-11-28",
+                "gender": "M",
+                "manager_id": null
+            },
+            {
+                "id": 24,
+                "email": "melanie06@example.org",
+                "bonus": 8004.0,
+                "active": true,
+                "dep_id": 2,
+                "name": "Cameron",
+                "age": 46,
+                "salary": 68321.0,
+                "hire_date": "2021-09-11",
+                "gender": "M",
+                "manager_id": null
+            },
+            {
+                "id": 25,
+                "email": "brandonowens@example.net",
+                "bonus": 3869.0,
+                "active": true,
+                "dep_id": 4,
+                "name": "Richard",
+                "age": 40,
+                "salary": 108721.0,
+                "hire_date": "2025-04-05",
+                "gender": "M",
+                "manager_id": null
+            },
+            {
+                "id": 26,
+                "email": "tthompson@example.org",
+                "bonus": 6939.0,
+                "active": false,
+                "dep_id": 3,
+                "name": "Lindsay",
+                "age": 44,
+                "salary": 74889.0,
+                "hire_date": "2020-09-20",
+                "gender": "F",
+                "manager_id": null
+            },
+            {
+                "id": 27,
+                "email": "shines@example.net",
+                "bonus": 2616.0,
+                "active": false,
+                "dep_id": 3,
+                "name": "Frank",
+                "age": 23,
+                "salary": 90061.0,
+                "hire_date": "2023-02-25",
+                "gender": "F",
+                "manager_id": null
+            },
+            {
+                "id": 28,
+                "email": "ramirezcameron@example.com",
+                "bonus": 4702.0,
+                "active": false,
+                "dep_id": 1,
+                "name": "Matthew",
+                "age": 50,
+                "salary": 109120.0,
+                "hire_date": "2022-02-16",
+                "gender": "M",
+                "manager_id": null
+            },
+            {
+                "id": 29,
+                "email": "hernandezsandy@example.org",
+                "bonus": 7071.0,
+                "active": true,
+                "dep_id": 5,
+                "name": "Nicholas",
+                "age": 53,
+                "salary": 95958.0,
+                "hire_date": "2020-07-25",
+                "gender": "M",
+                "manager_id": null
+            },
+            {
+                "id": 30,
+                "email": "arielaguilar@example.com",
+                "bonus": 1039.0,
+                "active": true,
+                "dep_id": 3,
+                "name": "Nicole",
+                "age": 51,
+                "salary": 35305.0,
+                "hire_date": "2022-03-22",
+                "gender": "M",
+                "manager_id": null
+            },
+            {
+                "id": 31,
+                "email": "wardchristopher@example.org",
+                "bonus": 5174.0,
+                "active": true,
+                "dep_id": 1,
+                "name": "Ernest",
+                "age": 39,
+                "salary": 75940.0,
+                "hire_date": "2024-02-26",
+                "gender": "M",
+                "manager_id": null
+            },
+            {
+                "id": 32,
+                "email": "sherryjenkins@example.com",
+                "bonus": 1016.0,
+                "active": true,
+                "dep_id": 4,
+                "name": "Andrew",
+                "age": 31,
+                "salary": 53137.0,
+                "hire_date": "2022-03-24",
+                "gender": "M",
+                "manager_id": null
+            },
+            {
+                "id": 33,
+                "email": "ddunlap@example.net",
+                "bonus": 2650.0,
+                "active": true,
+                "dep_id": 2,
+                "name": "Kevin",
+                "age": 49,
+                "salary": 44322.0,
+                "hire_date": "2023-07-02",
+                "gender": "M",
+                "manager_id": null
+            },
+            {
+                "id": 34,
+                "email": "scott44@example.com",
+                "bonus": 3898.0,
+                "active": true,
+                "dep_id": 4,
+                "name": "Philip",
+                "age": 25,
+                "salary": 94100.0,
+                "hire_date": "2023-08-31",
+                "gender": "M",
+                "manager_id": null
+            },
+            {
+                "id": 35,
+                "email": "colemanrodney@example.net",
+                "bonus": 5074.0,
+                "active": true,
+                "dep_id": 3,
+                "name": "Matthew",
+                "age": 33,
+                "salary": 76977.0,
+                "hire_date": "2024-04-22",
+                "gender": "F",
+                "manager_id": null
+            },
+            {
+                "id": 36,
+                "email": "millerjennifer@example.net",
+                "bonus": 9430.0,
+                "active": true,
+                "dep_id": 1,
+                "name": "Sarah",
+                "age": 26,
+                "salary": 58699.0,
+                "hire_date": "2020-09-30",
+                "gender": "M",
+                "manager_id": null
+            },
+            {
+                "id": 37,
+                "email": "iwatkins@example.net",
+                "bonus": 8213.0,
+                "active": true,
+                "dep_id": 3,
+                "name": "David",
+                "age": 49,
+                "salary": 114657.0,
+                "hire_date": "2024-06-06",
+                "gender": "F",
+                "manager_id": null
+            },
+            {
+                "id": 38,
+                "email": "nixonjoe@example.com",
+                "bonus": 7955.0,
+                "active": true,
+                "dep_id": 4,
+                "name": "Jennifer",
+                "age": 42,
+                "salary": 40499.0,
+                "hire_date": "2023-01-01",
+                "gender": "M",
+                "manager_id": null
+            },
+            {
+                "id": 39,
+                "email": "huynhkatherine@example.com",
+                "bonus": 4126.0,
+                "active": true,
+                "dep_id": 3,
+                "name": "Holly",
+                "age": 43,
+                "salary": 117703.0,
+                "hire_date": "2024-07-19",
+                "gender": "M",
+                "manager_id": null
+            },
+            {
+                "id": 40,
+                "email": "millermelanie@example.org",
+                "bonus": 4301.0,
+                "active": true,
+                "dep_id": 5,
+                "name": "Heather",
+                "age": 25,
+                "salary": 53369.0,
+                "hire_date": "2022-10-24",
+                "gender": "M",
+                "manager_id": null
+            },
+            {
+                "id": 41,
+                "email": "jessica71@example.com",
+                "bonus": 2278.0,
+                "active": false,
+                "dep_id": 5,
+                "name": "Colton",
+                "age": 26,
+                "salary": 100324.0,
+                "hire_date": "2021-05-18",
+                "gender": "F",
+                "manager_id": null
+            },
+            {
+                "id": 42,
+                "email": "gmiles@example.net",
+                "bonus": 7081.0,
+                "active": true,
+                "dep_id": 2,
+                "name": "Margaret",
+                "age": 38,
+                "salary": 37199.0,
+                "hire_date": "2021-09-21",
+                "gender": "M",
+                "manager_id": null
+            },
+            {
+                "id": 43,
+                "email": "donald02@example.net",
+                "bonus": 3598.0,
+                "active": true,
+                "dep_id": 2,
+                "name": "Mark",
+                "age": 22,
+                "salary": 94400.0,
+                "hire_date": "2025-01-23",
+                "gender": "M",
+                "manager_id": null
+            },
+            {
+                "id": 44,
+                "email": "ashley21@example.net",
+                "bonus": 9603.0,
+                "active": true,
+                "dep_id": 4,
+                "name": "Alexander",
+                "age": 31,
+                "salary": 97339.0,
+                "hire_date": "2023-08-17",
+                "gender": "M",
+                "manager_id": null
+            },
+            {
+                "id": 45,
+                "email": "hensleybrittany@example.com",
+                "bonus": 9148.0,
+                "active": true,
+                "dep_id": 1,
+                "name": "Mark",
+                "age": 40,
+                "salary": 30050.0,
+                "hire_date": "2021-03-06",
+                "gender": "M",
+                "manager_id": null
+            },
+            {
+                "id": 46,
+                "email": "pgarcia@example.net",
+                "bonus": 6351.0,
+                "active": true,
+                "dep_id": 1,
+                "name": "Bruce",
+                "age": 31,
+                "salary": 51863.0,
+                "hire_date": "2023-11-23",
+                "gender": "M",
+                "manager_id": null
+            },
+            {
+                "id": 47,
+                "email": "tanyataylor@example.com",
+                "bonus": 9733.0,
+                "active": true,
+                "dep_id": 3,
+                "name": "Kimberly",
+                "age": 44,
+                "salary": 101648.0,
+                "hire_date": "2022-04-23",
+                "gender": "F",
+                "manager_id": null
+            },
+            {
+                "id": 48,
+                "email": "bgreen@example.net",
+                "bonus": 5641.0,
+                "active": true,
+                "dep_id": 5,
+                "name": "Linda",
+                "age": 38,
+                "salary": 67862.0,
+                "hire_date": "2020-05-05",
+                "gender": "F",
+                "manager_id": null
+            },
+            {
+                "id": 49,
+                "email": "wellsdaniel@example.net",
+                "bonus": 2300.0,
+                "active": true,
+                "dep_id": 5,
+                "name": "Thomas",
+                "age": 50,
+                "salary": 58021.0,
+                "hire_date": "2025-06-16",
+                "gender": "F",
+                "manager_id": null
+            },
+            {
+                "id": 50,
+                "email": "barnesgina@example.net",
+                "bonus": 1512.0,
+                "active": false,
+                "dep_id": 5,
+                "name": "Samuel",
+                "age": 45,
+                "salary": 86167.0,
+                "hire_date": "2024-02-20",
+                "gender": "F",
+                "manager_id": null
+            }
+        ],
+        "error": null
+    },
+    {
+        "id": 59,
+        "query": "db.query(Employee).filter(Employee.id == emp_id).first()",
+        "success": false,
+        "result": null,
+        "error": "name 'emp_id' is not defined"
+    },
+    {
+        "id": 60,
+        "query": "db.query(Employee).filter(Employee.name.like(f\"%{name}%\")).all()",
+        "success": false,
+        "result": null,
+        "error": "name 'name' is not defined"
+    },
+    {
+        "id": 61,
+        "query": "db.query(Employee).filter(Employee.age.between(start_age, end_age)).all()",
+        "success": false,
+        "result": null,
+        "error": "name 'start_age' is not defined"
+    },
+    {
+        "id": 62,
+        "query": "",
+        "success": false,
+        "result": null,
+        "error": "invalid syntax (<string>, line 0)"
+    },
+    {
+        "id": 63,
+        "query": "db.query(Employee.name).all()",
+        "success": true,
+        "result": [
+            {
+                "value": "('Jessica',)"
+            },
+            {
+                "value": "('Amanda',)"
+            }
+        ],
+        "error": null
+    },
+    {
+        "id": 64,
+        "query": "db.query(Employee.salary).all()",
+        "success": true,
+        "result": [
+            {
+                "value": "(47922.0,)"
+            },
+            {
+                "value": "(102041.0,)"
+            }
+        ],
+        "error": null
+    },
+    {
+        "id": 65,
+        "query": "db.query(Employee).all(\\)",
+        "success": false,
+        "result": null,
+        "error": "unexpected character after line continuation character (<string>, line 1)"
+    },
+    {
+        "id": 66,
+        "query": "db.query(Employee).filter(Employee.active == True).all()",
+        "success": true,
+        "result": [],
+        "error": null
+    }
+]
