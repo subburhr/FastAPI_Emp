@@ -1,5 +1,5 @@
 # main.py
-from fastapi_app import fastapi_app
+from fastapi_app import app
 
 # Render (and uvicorn) looks for "app"
-app = fastapi_app
+app = app
