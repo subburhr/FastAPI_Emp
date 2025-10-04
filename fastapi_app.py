@@ -292,7 +292,7 @@ def seed_data(n_departments: int = Form(5), n_employees: int = Form(50), db: Ses
         <head>
             <meta http-equiv="refresh" content="2;url=/" />
             <style>
-                body {
+                body {{
                     background-color: #121212; /* Dark black background */
                     color: #00FFAA;           /* Neon green text for contrast */
                     display: flex;
@@ -303,23 +303,23 @@ def seed_data(n_departments: int = Form(5), n_employees: int = Form(50), db: Ses
                     flex-direction: column;
                     text-align: center;
                     margin: 0;
-                }
-                h2 {
+                }}
+                h2 {{
                     font-size: 2em;
                     margin-bottom: 20px;
-                }
-                p {
+                }}
+                p {{
                     font-size: 1.2em;
                     color: #FFD700; /* Gold for the paragraph */
-                }
-                a {
+                }}
+                a {{
                     color: #1E90FF; /* Dodger blue for links */
                     text-decoration: none;
                     font-weight: bold;
-                }
-                a:hover {
+                }}
+                a:hover {{
                     text-decoration: underline;
-                }
+                }}
             </style>
         </head>
         <body>
@@ -403,5 +403,3 @@ fastapi_app = FastAPI(title="Employee & Department CRUD")
 fastapi_app.include_router(employee_router)
 fastapi_app.include_router(department_router)
 fastapi_app.include_router(seed_router)
-
-
