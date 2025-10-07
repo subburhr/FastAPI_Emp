@@ -1,7 +1,7 @@
 from fastapi import FastAPI, APIRouter, Depends, HTTPException, Request, Form
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import Column, Integer, String, Float, Boolean, Date, ForeignKey, Table, create_engine, func
+from sqlalchemy import Column, Integer, String, Float, Boolean, Date, ForeignKey, Table, create_engine, func, text, or_, and_, case
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship, Session
 from pydantic import BaseModel
@@ -129,7 +129,7 @@ class EmployeeSchema(EmployeeBase):
 EmployeeSchema.update_forward_refs()
 
 # ----------------------------
-# Repositories
+# Repository Layer
 # ----------------------------
 class DepartmentRepository:
     def __init__(self, db: Session):
@@ -180,7 +180,7 @@ class EmployeeRepository:
         return emp
 
 # ----------------------------
-# Services
+# Service Layer
 # ----------------------------
 class DepartmentService:
     def __init__(self, db: Session):
@@ -220,8 +220,12 @@ class EmployeeService:
 app = FastAPI(title="Employee & Department CRUD")
 templates = Jinja2Templates(directory="templates")
 query_results = []
+
 QUERY_FILE = "stored_queries.json"
 
+# ----------------------------
+# Query Storage Utilities
+# ----------------------------
 def load_queries():
     if not os.path.exists(QUERY_FILE):
         with open(QUERY_FILE, "w") as f:
@@ -231,21 +235,27 @@ def load_queries():
         with open(QUERY_FILE, "r") as f:
             return json.load(f)
     except json.JSONDecodeError:
-        # Reset file if it's corrupted
         with open(QUERY_FILE, "w") as f:
             json.dump([], f)
         return []
-
 
 def save_queries(queries):
     with open(QUERY_FILE, "w") as f:
         json.dump(queries, f, indent=4)
 
-def save_query_record(query: str, success: bool, result=None, error=None):
+def add_query_if_new(query: str):
+    """
+    Add query only if it doesn't exist.
+    Assign new incremental ID.
+    """
     records = load_queries()
-    if not any(r["query"] == query and r.get("success") == success for r in records):
-        records.append({"id": len(records)+1, "query": query, "success": success, "result": result, "error": error})
+    exists = any(r["query"].strip() == query.strip() for r in records)
+    if not exists:
+        new_id = max([r["id"] for r in records], default=0) + 1
+        records.append({"id": new_id, "query": query.strip()})
         save_queries(records)
+        return True
+    return False
 
 # ----------------------------
 # Routers
@@ -273,14 +283,10 @@ def get_all_departments(service: DepartmentService = Depends(get_department_serv
 # ----------------------------
 # Seed Data
 # ----------------------------
-from sqlalchemy import text
-
-
 @seed_router.post("/seed-data", response_class=HTMLResponse)
 def seed_data(n_departments: int = Form(5), n_employees: int = Form(50), db: Session = Depends(get_db)):
     fake = Faker()
-
-    # Clear tables and association tables
+    # Clear tables
     db.execute(text("DELETE FROM employee_project"))
     db.execute(text("DELETE FROM employee_role"))
     db.query(Employee).delete()
@@ -328,22 +334,11 @@ def seed_data(n_departments: int = Form(5), n_employees: int = Form(50), db: Ses
             gender=random.choice(["M","F"]),
             dep_id=random.choice(dep_ids)
         )
-        # Assign random manager if employees exist
         if employees:
             emp.manager_id = random.choice(employees).id
 
-        # Assign random projects safely
-        chosen_projects = random.sample(projects, k=random.randint(0, len(projects)))
-        for proj in chosen_projects:
-            if proj not in emp.projects:
-                emp.projects.append(proj)
-
-        # Assign random roles safely
-        chosen_roles = random.sample(roles, k=random.randint(1, len(roles)))
-        for role in chosen_roles:
-            if role not in emp.roles:
-                emp.roles.append(role)
-
+        emp.projects = random.sample(projects, k=random.randint(0,len(projects)))
+        emp.roles = random.sample(roles, k=random.randint(1,len(roles)))
         employees.append(emp)
 
     db.add_all(employees)
@@ -370,16 +365,12 @@ def seed_data(n_departments: int = Form(5), n_employees: int = Form(50), db: Ses
     """
     return HTMLResponse(content=html_content)
 
-from sqlalchemy import create_engine, func, or_, and_, case
-
-
 # ----------------------------
-# Query endpoints
+# Query Endpoints
 # ----------------------------
 @seed_router.post("/run-query")
 def run_query(request: Request, query: str = Form(...), db: Session = Depends(get_db)):
     global query_results
-
     context = {
         "db": db,
         "Employee": Employee,
@@ -398,13 +389,13 @@ def run_query(request: Request, query: str = Form(...), db: Session = Depends(ge
         if hasattr(row, "__dict__"):
             d = row.__dict__.copy()
             d.pop("_sa_instance_state", None)
-            for k, v in d.items():
-                if isinstance(v, (date,)):
+            for k,v in d.items():
+                if isinstance(v,(date,)):
                     d[k] = v.isoformat()
             return d
         elif isinstance(row, dict):
-            for k, v in row.items():
-                if isinstance(v, (date,)):
+            for k,v in row.items():
+                if isinstance(v,(date,)):
                     row[k] = v.isoformat()
             return row
         else:
@@ -413,49 +404,44 @@ def run_query(request: Request, query: str = Form(...), db: Session = Depends(ge
     try:
         rows = eval(query, {}, context)
         result = []
-
         if isinstance(rows, list):
             for r in rows:
                 result.append(serialize_row(r))
         else:
             result.append(serialize_row(rows))
-
-        save_query_record(query, True, result=result)
         query_results.append({"query": query, "result": result, "error": None})
-
     except Exception as e:
-        save_query_record(query, False, error=str(e))
         query_results.append({"query": query, "result": None, "error": str(e)})
 
     departments = db.query(Department).all()
     employees = db.query(Employee).all()
     stored_queries = load_queries()
-    total_result = {
+    return templates.TemplateResponse("index.html", {
         "request": request,
         "departments": departments,
         "employees": employees,
         "results": query_results,
         "stored_queries": stored_queries
-    }
+    })
 
-    return templates.TemplateResponse("index.html", total_result)
+@seed_router.post("/save-query")
+def save_query(query: str = Form(...)):
+    """Save query only if new, do not replace existing."""
+    added = add_query_if_new(query)
+    return {"saved": added}
 
 @seed_router.post("/update-queries")
 async def update_queries(request: Request, db: Session = Depends(get_db)):
     form = await request.form()
     stored_queries = load_queries()
-
-    # Save only when Save Changes button is clicked
+    # Only update query text if user modifies explicitly
     for q in stored_queries:
         key = f"query_{q['id']}"
         if key in form:
             q['query'] = form[key]
-
     save_queries(stored_queries)
-
     departments = db.query(Department).all()
     employees = db.query(Employee).all()
-
     return templates.TemplateResponse("index.html", {
         "request": request,
         "departments": departments,
@@ -467,12 +453,10 @@ async def update_queries(request: Request, db: Session = Depends(get_db)):
 @seed_router.post("/delete-query/{query_id}")
 def delete_query(query_id: int, request: Request, db: Session = Depends(get_db)):
     stored_queries = load_queries()
-    stored_queries = [q for q in stored_queries if q['id'] != query_id]  # remove selected query
+    stored_queries = [q for q in stored_queries if q['id'] != query_id]
     save_queries(stored_queries)
-
     departments = db.query(Department).all()
     employees = db.query(Employee).all()
-
     return templates.TemplateResponse("index.html", {
         "request": request,
         "departments": departments,
@@ -495,6 +479,70 @@ def clear_results(request: Request, db: Session = Depends(get_db)):
         "results": query_results,
         "stored_queries": stored_queries
     })
+
+# ----------------------------
+# Add New Query API with redirect message
+# ----------------------------
+from fastapi.responses import HTMLResponse
+
+@seed_router.post("/add-query")
+async def add_query(request: Request, query: str = Form(...)):
+    """
+    Add a new query to stored_queries.json.
+    Only saves if it is not already present.
+    Shows a message and redirects after 2 seconds.
+    """
+    added = add_query_if_new(query)
+
+    if added:
+        message = "Query added successfully!"
+    else:
+        message = "Query already exists, not added."
+
+    html_content = f"""
+    <html>
+        <head>
+            <meta http-equiv="refresh" content="1;url=/" />
+            <style>
+                body {{
+                    background-color:#121212;
+                    color:#00FFAA;
+                    display:flex;
+                    justify-content:center;
+                    align-items:center;
+                    height:100vh;
+                    font-family:'Arial',sans-serif;
+                    flex-direction:column;
+                    text-align:center;
+                    margin:0;
+                }}
+                h2 {{
+                    font-size:2em;
+                    margin-bottom:20px;
+                }}
+                p {{
+                    font-size:1.2em;
+                    color:#FFD700;
+                }}
+                a {{
+                    color:#1E90FF;
+                    text-decoration:none;
+                    font-weight:bold;
+                }}
+                a:hover {{
+                    text-decoration:underline;
+                }}
+            </style>
+        </head>
+        <body>
+            <h2>{message}</h2>
+            <p>You will be redirected to the home page in 2 seconds...</p>
+            <p>If not, <a href="/">click here</a>.</p>
+        </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content)
+
 
 
 @seed_router.get("/download-results", response_class=FileResponse)
@@ -526,4 +574,3 @@ def home(request: Request, db: Session = Depends(get_db)):
 app.include_router(employee_router)
 app.include_router(department_router)
 app.include_router(seed_router)
-
