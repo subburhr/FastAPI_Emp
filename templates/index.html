@@ -336,8 +336,8 @@ a:hover {
         <div class="circle" data-id="section-departments">1</div>
         <div class="circle" data-id="section-employees">2</div>
         <div class="circle" data-id="section-seed">3</div>
-        <div class="circle" data-id="section-query">4</div>
-        <div class="circle" data-id="section-stored">5</div>
+        <!-- <div class="circle" data-id="section-query">4</div> -->
+        <div class="circle" data-id="section-stored">4</div>
     </div>
 
     <!-- Departments Section -->
@@ -415,8 +415,8 @@ a:hover {
         <section class="section">
             <h2 class="section-title">🧰 Seed Data</h2>
             <form action="/seed-data" method="post">
-                <label>Departments: <input type="number" name="n_departments" value="5"></label><br><br>
-                <label>Employees: <input type="number" name="n_employees" value="50"></label><br><br>
+                <label>Departments: <input type="number" name="n_departments" value="1"></label><br><br>
+                <label>Employees: <input type="number" name="n_employees" value="2"></label><br><br>
                 <button type="submit">Seed Database</button>
             </form>
         </section>
@@ -479,6 +479,15 @@ a:hover {
     <div class="section-card" id="section-stored">
         <section class="section">
             <h2 class="section-title">💾 Stored Queries</h2>
+            <!-- Add New Query -->
+                <div class="card" style="margin-top:20px;">
+                    <h3>➕ Add New Query</h3>
+                    <form action="/add-query" method="post">
+                        <textarea name="query" rows="3" placeholder="Enter new query here..." required></textarea><br>
+                        <button type="submit">Add Query</button>
+                        
+                    </form>
+                </div>
             {% if stored_queries %}
             <div class="query-circles" id="query-circles">
                 {% for q in stored_queries %}
@@ -494,6 +503,7 @@ a:hover {
                         <textarea id="query_text_{{ q.id }}" name="query_{{ q.id }}">{{ q.query }}</textarea><br>
                         <button type="button" onclick="runStoredQuery({{ q.id }})">▶ Run</button>
                         <button type="submit" formaction="/update-queries" formmethod="post">💾 Save Changes</button>
+                        <button formaction="/clear-results" formmethod="post">Clear All Results</button>
                         <button type="submit" formaction="/delete-query/{{ q.id }}" formmethod="post" onclick="return confirm('Delete this query?')">🗑 Delete</button>
 
                         {% if q.result %}
@@ -568,7 +578,6 @@ a:hover {
                     {% endif %}
                 </div>
             {% endif %}
-          
 
         </section>
     </div>
