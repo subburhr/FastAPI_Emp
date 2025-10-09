@@ -349,7 +349,7 @@ def seed_data(n_departments: int = Form(5), n_employees: int = Form(50), db: Ses
         <head>
             <meta http-equiv="refresh" content="2;url=/" />
             <style>
-                body {{ background-color:#121212; color:#00FFAA; display:flex; justify-content:center; align-items:center; height:100vh; font-family:'Arial',sans-serif; flex-direction:column; text-align:center; margin:0; }}
+                body {{background: radial-gradient(circle at top, #0a0f2d, #000); color:#00FFAA; display:flex; justify-content:center; align-items:center; height:100vh; font-family:'Arial',sans-serif; flex-direction:column; text-align:center; margin:0; }}
                 h2 {{ font-size:2em; margin-bottom:20px; }}
                 p {{ font-size:1.2em; color:#FFD700; }}
                 a {{ color:#1E90FF; text-decoration:none; font-weight:bold; }}
@@ -505,7 +505,7 @@ async def add_query(request: Request, query: str = Form(...)):
             <meta http-equiv="refresh" content="1;url=/" />
             <style>
                 body {{
-                    background-color:#121212;
+                    background: radial-gradient(circle at top, #0a0f2d, #000);
                     color:#00FFAA;
                     display:flex;
                     justify-content:center;
@@ -574,3 +574,4 @@ def home(request: Request, db: Session = Depends(get_db)):
 app.include_router(employee_router)
 app.include_router(department_router)
 app.include_router(seed_router)
+
